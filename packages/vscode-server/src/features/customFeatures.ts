@@ -41,18 +41,26 @@ export function register(
         if (!document) return;
         return servicesManager.getMatchService(document.uri)?.__internal__.getD3(document);
     });
-    connection.onRequest(WriteVirtualFilesRequest.type, async () => {
+    connection.onRequest(WriteVirtualFilesRequest.type, async handler => {
         for (const [_, service] of servicesManager.services) {
             const ls = service.getLanguageServiceDontCreate();
             if (!ls) continue;
-            const globalDocs = ls.__internal__.getGlobalDocs();
-            for (const globalDoc of globalDocs) {
+            if (handler.lsType === 'template') {
+                const globalDoc = ls.__internal__.getGlobalDoc();
                 fs.writeFile(uriToFsPath(globalDoc.uri), globalDoc.getText(), () => { });
             }
             const sourceFiles = ls.__internal__.getAllSourceFiles();
             for (const sourceFile of sourceFiles) {
-                for (const [uri, doc] of sourceFile.getTsDocuments()) {
-                    fs.writeFile(uriToFsPath(uri), doc.getText(), () => {});
+                if (handler.lsType === 'template') {
+                    for (const [uri, doc] of sourceFile.getTemplateLsDocs()) {
+                        fs.writeFile(uriToFsPath(uri), doc.getText(), () => { });
+                    }
+                }
+                else {
+                    const doc = sourceFile.getScriptLsDoc();
+                    if (doc) {
+                        fs.writeFile(uriToFsPath(doc.uri), doc.getText(), () => { });
+                    }
                 }
             }
         }

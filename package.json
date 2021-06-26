@@ -239,8 +239,13 @@
 				"category": "Volar"
 			},
 			{
-				"command": "volar.action.writeVirtualFiles",
-				"title": "Write Virtual Files",
+				"command": "volar.action.writeTemplateLsVirtualFiles",
+				"title": "Write Template LS Virtual Files",
+				"category": "Debug"
+			},
+			{
+				"command": "volar.action.writeScriptLsVirtualFiles",
+				"title": "Write Script LS Virtual Files",
 				"category": "Debug"
 			},
 			{

@@ -6,6 +6,10 @@ import type { ApiLanguageServiceContext } from '../types';
 import * as dedupe from '../utils/dedupe';
 import { tsEditToVueEdit } from './rename';
 
+export interface TsCodeActionData {
+	lsType: 'template' | 'script',
+}
+
 export function register({ mapper, getCssLs }: ApiLanguageServiceContext) {
 
 	return (uri: string, range: Range, context: CodeActionContext) => {
@@ -56,6 +60,7 @@ export function register({ mapper, getCssLs }: ApiLanguageServiceContext) {
 				result.push({
 					...tsCodeAction,
 					edit,
+					data: { lsType: tsRange.sourceMap.lsType },
 				});
 			}
 		}

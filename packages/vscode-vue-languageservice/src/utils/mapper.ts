@@ -11,12 +11,13 @@ import type { HTMLDocument } from 'vscode-html-languageservice';
 import type { PugDocument } from 'vscode-pug-languageservice';
 import type { SourceFile } from '../sourceFile';
 import type * as ts from 'typescript';
+import type * as ts2 from 'vscode-typescript-languageservice';
 import { fsPathToUri, uriToFsPath } from '@volar/shared';
 import { Range as MapedRange } from '@volar/source-map';
 
 export function createMapper(
     sourceFiles: Map<string, SourceFile>,
-    tsLanguageService: TsLanguageService,
+    getTsLs: (uri: string) => ts2.LanguageService,
     getTextDocument: (uri: string) => TextDocument | undefined,
 ) {
     return {
@@ -126,30 +127,30 @@ export function createMapper(
         },
         tsUri: {
             from: (tsUri: string) => {
-
                 const sourceFile = findSourceFileByTsUri(tsUri);
                 if (sourceFile) {
                     return sourceFile.getTextDocument();
                 }
-
-                const document = tsLanguageService.__internal__.getTextDocument(tsUri);
+                const scriptTsLs = getTsLs('script');
+                const document = scriptTsLs.__internal__.getTextDocumentUncheck(tsUri);
                 if (document) {
                     return document;
                 }
             },
             to: (vueUri: string) => {
+                const scriptTsLs = getTsLs('script');
                 const sourceFile = sourceFiles.get(vueUri);
                 if (sourceFile) {
                     return {
-                        languageService: tsLanguageService,
+                        languageService: scriptTsLs,
                         textDocument: sourceFile.getMainTsDoc(),
                         isVirtualFile: true,
                     }
                 }
-                const tsDoc = tsLanguageService.__internal__.getTextDocument(vueUri);
+                const tsDoc = scriptTsLs.__internal__.getTextDocumentUncheck(vueUri);
                 if (tsDoc) {
                     return {
-                        languageService: tsLanguageService,
+                        languageService: scriptTsLs,
                         textDocument: tsDoc,
                         isVirtualFile: false,
                     };
@@ -210,13 +211,15 @@ export function createMapper(
     };
     function fromTs(tsUri: string, tsStart: Position, tsEnd?: Position) {
 
-        const tsDoc = tsLanguageService.__internal__.getTextDocument(tsUri);
+        const tsLs = getTsLs(tsUri);
+        const tsDoc = tsLs.__internal__.getTextDocumentUncheck(tsUri);
         if (!tsDoc) return [];
 
         const _result = fromTs2(
             uriToFsPath(tsUri),
             tsDoc.offsetAt(tsStart),
             tsEnd ? tsDoc.offsetAt(tsEnd) : undefined,
+            tsLs,
         );
 
         const result: {
@@ -238,8 +241,12 @@ export function createMapper(
 
         return result;
     };
-    function fromTs2(tsFsPath: string, tsStart: number, tsEnd?: number) {
+    function fromTs2(tsFsPath: string, tsStart: number, tsEnd?: number, tsLs?: ts2.LanguageService) {
         tsEnd = tsEnd ?? tsStart;
+
+        if (!tsLs) {
+            tsLs = getTsLs(fsPathToUri(tsFsPath));
+        }
 
         const result: {
             fileName: string,
@@ -249,7 +256,7 @@ export function createMapper(
         }[] = [];
         const tsUri = fsPathToUri(tsFsPath);
 
-        const document = tsLanguageService.__internal__.getTextDocument(tsUri);
+        const document = tsLs.__internal__.getTextDocumentUncheck(tsUri);
         if (!document) return [];
 
         const sourceFile = findSourceFileByTsUri(tsUri);
@@ -307,7 +314,7 @@ export function createMapper(
                     end: r.textDocument.positionAt(r.range.end),
                 },
                 data: r.data,
-                languageService: tsLanguageService,
+                languageService: getTsLs(r.lsType),
             });
         }
 
@@ -317,6 +324,7 @@ export function createMapper(
         vueEnd = vueEnd ?? vueStart;
 
         const result: {
+            lsType: 'template' | 'script',
             sourceMap: TsSourceMap | undefined,
             fileName: string,
             textDocument: TextDocument,
@@ -329,20 +337,36 @@ export function createMapper(
             for (const sourceMap of sourceFile.getTsSourceMaps()) {
                 for (const tsRange of sourceMap.getMappedRanges2(vueStart, vueEnd)) {
                     result.push({
+                        lsType: 'template',
                         sourceMap: sourceMap,
                         fileName: uriToFsPath(sourceMap.mappedDocument.uri),
                         textDocument: sourceMap.mappedDocument,
                         range: tsRange,
                         data: tsRange.data,
-                        languageService: tsLanguageService.__internal__.raw,
+                        languageService: getTsLs('template').__internal__.raw,
+                    });
+                }
+            }
+            const scriptSourceMap = sourceFile.getScriptLsSourceMap();
+            if (scriptSourceMap) {
+                for (const tsRange of scriptSourceMap.getMappedRanges2(vueStart, vueEnd)) {
+                    result.push({
+                        lsType: 'script',
+                        sourceMap: scriptSourceMap,
+                        fileName: uriToFsPath(scriptSourceMap.mappedDocument.uri),
+                        textDocument: scriptSourceMap.mappedDocument,
+                        range: tsRange,
+                        data: tsRange.data,
+                        languageService: getTsLs('script').__internal__.raw,
                     });
                 }
             }
         }
         else {
-            const tsDoc = tsLanguageService.__internal__.getTextDocument(fsPathToUri(vueFsPath));
+            const tsDoc = getTsLs('script').__internal__.getTextDocumentUncheck(fsPathToUri(vueFsPath));
             if (tsDoc) {
                 result.push({
+                    lsType: 'script',
                     sourceMap: undefined,
                     fileName: uriToFsPath(tsDoc.uri),
                     textDocument: tsDoc,
@@ -365,7 +389,7 @@ export function createMapper(
                             referencesCodeLens: true,
                         },
                     },
-                    languageService: tsLanguageService.__internal__.raw,
+                    languageService: getTsLs('script').__internal__.raw,
                 });
             }
         }
@@ -373,7 +397,10 @@ export function createMapper(
     };
     function findSourceFileByTsUri(tsUri: string) {
         for (const sourceFile of sourceFiles.values()) {
-            if (sourceFile.getTsDocuments().has(tsUri)) {
+            if (sourceFile.getTemplateLsDocs().has(tsUri)) {
+                return sourceFile;
+            }
+            else if (sourceFile.getScriptLsDoc()?.uri === tsUri) {
                 return sourceFile;
             }
         }

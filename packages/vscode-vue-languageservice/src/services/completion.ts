@@ -90,7 +90,7 @@ export const eventModifiers: Record<string, string> = {
 	passive: 'attaches a DOM event with { passive: true }.',
 };
 
-export function register({ sourceFiles, tsLs, htmlLs, pugLs, getCssLs, jsonLs, documentContext, vueHost }: ApiLanguageServiceContext) {
+export function register({ sourceFiles, getTsLs, htmlLs, pugLs, getCssLs, jsonLs, documentContext, vueHost }: ApiLanguageServiceContext) {
 
 	const getEmbeddedDoc = getEmbeddedDocument.register(arguments[0]);
 	let cache: {
@@ -193,10 +193,10 @@ export function register({ sourceFiles, tsLs, htmlLs, pugLs, getCssLs, jsonLs, d
 						};
 					}
 					const quotePreference = tsRange.data.vueTag === 'template' ? 'single' : 'auto';
-					let tsItems = tsLs.doComplete(sourceMap.mappedDocument.uri, tsRange.start, {
+					let tsItems = getTsLs(sourceMap.lsType).doComplete(sourceMap.mappedDocument.uri, tsRange.start, {
 						quotePreference,
-						includeCompletionsForModuleExports: ['script', 'scriptSetup'].includes(tsRange.data.vueTag ?? ''), // TODO: read ts config
-						includeCompletionsForImportStatements: ['script', 'scriptSetup'].includes(tsRange.data.vueTag ?? ''), // TODO: read ts config
+						includeCompletionsForModuleExports: ['script', 'scriptSetup'].includes(tsRange.data.vueTag), // TODO: read ts config
+						includeCompletionsForImportStatements: ['script', 'scriptSetup'].includes(tsRange.data.vueTag), // TODO: read ts config
 						triggerCharacter: context?.triggerCharacter as ts.CompletionsTriggerCharacter,
 					});
 					if (tsRange.data.vueTag === 'template') {
@@ -218,6 +218,7 @@ export function register({ sourceFiles, tsLs, htmlLs, pugLs, getCssLs, jsonLs, d
 						);
 						const data: CompletionData = {
 							uri: uri,
+							lsType: sourceMap.lsType,
 							docUri: sourceMap.mappedDocument.uri,
 							mode: 'ts',
 							tsItem: tsItem,

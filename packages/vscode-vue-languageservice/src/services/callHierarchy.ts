@@ -10,7 +10,7 @@ import type {
 import type { ApiLanguageServiceContext } from '../types';
 import * as dedupe from '../utils/dedupe';
 
-export function register({ sourceFiles, tsLs }: ApiLanguageServiceContext) {
+export function register({ sourceFiles, getTsLs }: ApiLanguageServiceContext) {
 	function doPrepare(uri: string, position: Position) {
 		let vueItems: CallHierarchyItem[] = [];
 
@@ -37,6 +37,7 @@ export function register({ sourceFiles, tsLs }: ApiLanguageServiceContext) {
 		return dedupe.withLocations(vueItems);
 	}
 	function getIncomingCalls(item: CallHierarchyItem) {
+		const tsLs = getTsLs((item.data as any)?.uri);
 		const tsItems = tsTsCallHierarchyItem(item);
 		const tsIncomingItems = tsItems.map(tsLs.callHierarchy.getIncomingCalls).flat();
 		const vueIncomingItems: CallHierarchyIncomingCall[] = [];
@@ -52,6 +53,7 @@ export function register({ sourceFiles, tsLs }: ApiLanguageServiceContext) {
 		return dedupe.withCallHierarchyIncomingCalls(vueIncomingItems);
 	}
 	function getOutgoingCalls(item: CallHierarchyItem) {
+		const tsLs = getTsLs((item.data as any)?.uri);
 		const tsItems = tsTsCallHierarchyItem(item);
 		const tsIncomingItems = tsItems.map(tsLs.callHierarchy.getOutgoingCalls).flat();
 		const vueIncomingItems: CallHierarchyOutgoingCall[] = [];
@@ -75,7 +77,7 @@ export function register({ sourceFiles, tsLs }: ApiLanguageServiceContext) {
 
 	function worker(tsDocUri: string, tsPos: Position) {
 		const vueOrTsItems: CallHierarchyItem[] = [];
-		const tsItems = tsLs.callHierarchy.doPrepare(tsDocUri, tsPos);
+		const tsItems = getTsLs(tsDocUri).callHierarchy.doPrepare(tsDocUri, tsPos);
 		for (const tsItem of tsItems) {
 			const result = toVueCallHierarchyItem(tsItem, []);
 			if (!result) continue;
@@ -83,6 +85,10 @@ export function register({ sourceFiles, tsLs }: ApiLanguageServiceContext) {
 			if (vueItem) {
 				vueOrTsItems.push(vueItem);
 			}
+		}
+		for (const item of vueOrTsItems) {
+			if (!item.data) item.data = {};
+			(item.data as any).uri = tsDocUri;
 		}
 		return vueOrTsItems;
 	}

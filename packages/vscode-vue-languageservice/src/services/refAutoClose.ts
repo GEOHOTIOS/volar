@@ -33,7 +33,7 @@ export function register({ mapper }: ApiLanguageServiceContext) {
 			for (const typeDefine of typeDefs) {
 				const uri = Location.is(typeDefine) ? typeDefine.uri : typeDefine.targetUri;
 				const range = Location.is(typeDefine) ? typeDefine.range : typeDefine.targetSelectionRange;
-				const defineDoc = tsRange.languageService.__internal__.getTextDocument(uri);
+				const defineDoc = tsRange.languageService.__internal__.getTextDocumentUncheck(uri);
 				if (!defineDoc)
 					continue;
 				const typeName = defineDoc.getText(range);

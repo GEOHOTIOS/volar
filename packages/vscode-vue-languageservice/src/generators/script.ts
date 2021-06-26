@@ -6,6 +6,7 @@ import { SearchTexts } from '../utils/string';
 import * as path from 'upath';
 
 export function generate(
+    lsType: 'template' | 'script',
     uri: string,
     script: null | {
         src?: string,
@@ -24,9 +25,12 @@ export function generate(
     writeScriptSrc();
     writeScript();
     writeScriptSetup();
-    writeExportComponent();
-    writeExportOptions();
-    writeConstNameOption();
+
+    if (lsType === 'template') {
+        writeExportComponent();
+        writeExportOptions();
+        writeConstNameOption();
+    }
 
     return {
         ...codeGen,
@@ -45,15 +49,15 @@ export function generate(
             {
                 vueTag: 'scriptSrc',
                 capabilities: {
-                    basic: true,
+                    basic: lsType === 'script',
                     references: true,
-                    definitions: true,
+                    definitions: lsType === 'script',
                     rename: true,
-                    diagnostic: true,
-                    formatting: true,
-                    completion: true,
-                    semanticTokens: true,
-                    foldingRanges: true,
+                    diagnostic: lsType === 'script',
+                    formatting: lsType === 'script',
+                    completion: lsType === 'script',
+                    semanticTokens: lsType === 'script',
+                    foldingRanges: lsType === 'script',
                 },
             }
         );
@@ -72,15 +76,15 @@ export function generate(
             {
                 vueTag: 'script',
                 capabilities: {
-                    basic: true,
+                    basic: lsType === 'script',
                     references: true,
-                    definitions: true,
+                    definitions: lsType === 'script',
                     rename: true,
-                    diagnostic: true,
-                    formatting: true,
-                    completion: true,
-                    semanticTokens: true,
-                    foldingRanges: true,
+                    diagnostic: lsType === 'script',
+                    formatting: lsType === 'script',
+                    completion: lsType === 'script',
+                    semanticTokens: lsType === 'script',
+                    foldingRanges: lsType === 'script',
                 },
             }
         );
@@ -123,10 +127,10 @@ export function generate(
                     {
                         vueTag: 'scriptSetup',
                         capabilities: {
-                            completion: true,
-                            definitions: true,
+                            completion: lsType === 'script',
+                            definitions: lsType === 'script',
                             references: true,
-                            semanticTokens: true,
+                            semanticTokens: lsType === 'script',
                             rename: true,
                         },
                     },
@@ -160,7 +164,7 @@ export function generate(
                             {
                                 vueTag: 'scriptSetup',
                                 capabilities: {
-                                    diagnostic: true,
+                                    diagnostic: lsType === 'script',
                                 },
                             },
                         );
@@ -173,7 +177,7 @@ export function generate(
                         {
                             vueTag: 'scriptSetup',
                             capabilities: {
-                                diagnostic: true,
+                                diagnostic: lsType === 'script',
                             },
                         },
                     );
@@ -202,9 +206,9 @@ export function generate(
                         {
                             vueTag: 'scriptSetup',
                             capabilities: {
-                                basic: true, // hover
+                                basic: lsType === 'script', // hover
                                 references: true,
-                                diagnostic: true,
+                                diagnostic: lsType === 'script',
                             },
                         },
                     );
@@ -236,7 +240,7 @@ export function generate(
                         {
                             vueTag: 'scriptSetup',
                             capabilities: {
-                                diagnostic: true,
+                                diagnostic: lsType === 'script',
                             },
                         },
                     );
@@ -327,13 +331,13 @@ export function generate(
                 {
                     vueTag: 'scriptSetup',
                     capabilities: {
-                        basic: true,
+                        basic: lsType === 'script',
                         references: true,
-                        definitions: true,
-                        diagnostic: true,
+                        definitions: lsType === 'script',
+                        diagnostic: lsType === 'script',
                         rename: true,
-                        completion: true,
-                        semanticTokens: true,
+                        completion: lsType === 'script',
+                        semanticTokens: lsType === 'script',
                     },
                 },
             );

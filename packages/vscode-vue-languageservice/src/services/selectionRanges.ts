@@ -5,7 +5,7 @@ import type {
 import type { SourceFile } from '../sourceFile';
 import type { ApiLanguageServiceContext } from '../types';
 
-export function register({ sourceFiles, tsLs, htmlLs, pugLs, getCssLs }: ApiLanguageServiceContext) {
+export function register({ sourceFiles, getTsLs, htmlLs, pugLs, getCssLs }: ApiLanguageServiceContext) {
 	return (uri: string, positions: Position[]) => {
 		const sourceFile = sourceFiles.get(uri);
 		if (!sourceFile) return;
@@ -21,7 +21,7 @@ export function register({ sourceFiles, tsLs, htmlLs, pugLs, getCssLs }: ApiLang
 				for (const sourceMap of sourceFile.getTsSourceMaps()) {
 					for (const tsRange of sourceMap.getMappedRanges(position)) {
 						if (!tsRange.data.capabilities.basic) continue;
-						const selectRange = tsLs.getSelectionRange(sourceMap.mappedDocument.uri, tsRange.start);
+						const selectRange = getTsLs(sourceMap.lsType).getSelectionRange(sourceMap.mappedDocument.uri, tsRange.start);
 						if (selectRange) {
 							const vueRange = sourceMap.getSourceRange(selectRange.range.start, selectRange.range.end);
 							if (vueRange) {

@@ -6,7 +6,7 @@ import * as upath from 'upath';
 import { SearchTexts } from '../utils/string';
 import { uriToFsPath } from '@volar/shared';
 
-export function useScriptMain(
+export function useTemplateLsMainScript(
 	getUnreactiveDoc: () => TextDocument,
 	script: Ref<IDescriptor['script']>,
 	scriptSetup: Ref<IDescriptor['scriptSetup']>,
@@ -60,7 +60,7 @@ export function useScriptMain(
 		if (textDocument.value) {
 			const vueDoc = getUnreactiveDoc();
 			const docText = textDocument.value.getText();
-			const sourceMap = new SourceMaps.TsSourceMap(vueDoc, textDocument.value, false, {
+			const sourceMap = new SourceMaps.TsSourceMap(vueDoc, textDocument.value, 'template', false, {
 				foldingRanges: false,
 				formatting: false,
 				documentSymbol: false,

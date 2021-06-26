@@ -43,47 +43,47 @@ export function createLanguageService(_host: LanguageServiceHost, ts: typeof imp
 	languageService = shPlugin.decorate(languageService);
 
 	return {
-		findDefinition: definitions.register(languageService, getTextDocument),
-		findTypeDefinition: typeDefinitions.register(languageService, getTextDocument),
-		findReferences: references.register(languageService, getTextDocument),
-		prepareRename: prepareRename.register(languageService, getTextDocument),
-		doRename: rename.register(languageService, getTextDocument),
-		getEditsForFileRename: fileRename.register(languageService, getTextDocument),
-		getCodeActions: codeActions.register(languageService, getTextDocument),
-		doCodeActionResolve: codeActionResolve.register(languageService, getTextDocument),
+		findDefinition: definitions.register(languageService, getTextDocumentCheck),
+		findTypeDefinition: typeDefinitions.register(languageService, getTextDocumentCheck),
+		findReferences: references.register(languageService, getTextDocumentCheck),
+		prepareRename: prepareRename.register(languageService, getTextDocumentCheck),
+		doRename: rename.register(languageService, getTextDocumentCheck),
+		getEditsForFileRename: fileRename.register(languageService, getTextDocumentCheck),
+		getCodeActions: codeActions.register(languageService, getTextDocumentCheck),
+		doCodeActionResolve: codeActionResolve.register(languageService, getTextDocumentCheck),
 
-		findDocumentHighlights: documentHighlight.register(languageService, getTextDocument, ts),
-		findDocumentSymbols: documentSymbol.register(languageService, getTextDocument),
-		findWorkspaceSymbols: workspaceSymbols.register(languageService, getTextDocument),
-		doComplete: completions.register(languageService, getTextDocument, host.getCurrentDirectory()),
-		doCompletionResolve: completionResolve.register(languageService, getTextDocument, ts),
-		doHover: hover.register(languageService, getTextDocument, ts),
-		doFormatting: formatting.register(languageService, getTextDocument),
-		getSignatureHelp: signatureHelp.register(languageService, getTextDocument, ts),
-		getSelectionRange: selectionRanges.register(languageService, getTextDocument),
-		doValidation: diagnostics.register(languageService, getTextDocument, ts),
-		getFoldingRanges: foldingRanges.register(languageService, getTextDocument, ts),
-		getDocumentSemanticTokens: semanticTokens.register(languageService, getTextDocument),
-		callHierarchy: callHierarchy.register(languageService, getTextDocument),
+		findDocumentHighlights: documentHighlight.register(languageService, getTextDocumentCheck, ts),
+		findDocumentSymbols: documentSymbol.register(languageService, getTextDocumentCheck),
+		findWorkspaceSymbols: workspaceSymbols.register(languageService, getTextDocumentCheck),
+		doComplete: completions.register(languageService, getTextDocumentCheck, host.getCurrentDirectory()),
+		doCompletionResolve: completionResolve.register(languageService, getTextDocumentCheck, ts),
+		doHover: hover.register(languageService, getTextDocumentCheck, ts),
+		doFormatting: formatting.register(languageService, getTextDocumentCheck),
+		getSignatureHelp: signatureHelp.register(languageService, getTextDocumentCheck, ts),
+		getSelectionRange: selectionRanges.register(languageService, getTextDocumentCheck),
+		doValidation: diagnostics.register(languageService, getTextDocumentCheck, ts),
+		getFoldingRanges: foldingRanges.register(languageService, getTextDocumentCheck, ts),
+		getDocumentSemanticTokens: semanticTokens.register(languageService, getTextDocumentCheck),
+		callHierarchy: callHierarchy.register(languageService, getTextDocumentCheck),
 
 		dispose,
 
 		__internal__: {
 			raw: languageService,
 			host,
-			getTextDocument: getTextDocumentNoChecking,
-			getTextDocument2: getTextDocument,
+			getTextDocumentUncheck,
+			getTextDocumentCheck,
 		},
 	};
 
-	function getTextDocument(uri: string) {
+	function getTextDocumentCheck(uri: string) {
 		const fileName = uriToFsPath(uri);
 		if (!languageService.getProgram()?.getSourceFile(fileName)) {
 			return;
 		}
-		return getTextDocumentNoChecking(uri);
+		return getTextDocumentUncheck(uri);
 	}
-	function getTextDocumentNoChecking(uri: string) {
+	function getTextDocumentUncheck(uri: string) {
 		const fileName = uriToFsPath(uri);
 		const version = host.getScriptVersion(fileName);
 		const oldDoc = documents.get(uri);

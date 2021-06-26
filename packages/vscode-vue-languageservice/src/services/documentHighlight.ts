@@ -2,7 +2,7 @@ import type { DocumentHighlight, Position } from 'vscode-languageserver/node';
 import type { SourceFile } from '../sourceFile';
 import type { ApiLanguageServiceContext } from '../types';
 
-export function register({ sourceFiles, tsLs, htmlLs, pugLs, getCssLs }: ApiLanguageServiceContext) {
+export function register({ sourceFiles, getTsLs, htmlLs, pugLs, getCssLs }: ApiLanguageServiceContext) {
 	return (uri: string, position: Position) => {
 		const sourceFile = sourceFiles.get(uri);
 		if (!sourceFile) return;
@@ -21,7 +21,7 @@ export function register({ sourceFiles, tsLs, htmlLs, pugLs, getCssLs }: ApiLang
 			for (const sourceMap of sourceFile.getTsSourceMaps()) {
 				for (const tsRange of sourceMap.getMappedRanges(position)) {
 					if (!tsRange.data.capabilities.basic) continue;
-					const highlights = tsLs.findDocumentHighlights(sourceMap.mappedDocument.uri, tsRange.start);
+					const highlights = getTsLs(sourceMap.lsType).findDocumentHighlights(sourceMap.mappedDocument.uri, tsRange.start);
 					for (const highlight of highlights) {
 						const vueRange = sourceMap.getSourceRange(highlight.range.start, highlight.range.end);
 						if (vueRange) {

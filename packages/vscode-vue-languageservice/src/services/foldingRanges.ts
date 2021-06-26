@@ -14,7 +14,7 @@ export function register(context: HtmlLanguageServiceContext) {
 
 		let uriTsDocumentMap = new Map();
 		const dummyTs = getDummyTsLs(ts, document);
-		const sourceFile = createSourceFile(document, dummyTs.ls, uriTsDocumentMap, context);
+		const sourceFile = createSourceFile(document, dummyTs.ls, dummyTs.ls, context);
 		const vueResult = getVueResult(sourceFile); // include html folding ranges
 		const tsResult = getTsResult(sourceFile);
 		const cssResult = getCssResult(sourceFile);
@@ -46,7 +46,7 @@ export function register(context: HtmlLanguageServiceContext) {
 			const tsSourceMaps = [
 				...sourceFile.getTsSourceMaps(),
 				sourceFile.getTemplateScriptFormat().sourceMap,
-				...sourceFile.getScriptsRaw().sourceMaps,
+				...sourceFile.docLsScripts().sourceMaps,
 			].filter(notEmpty);
 
 			let result: FoldingRange[] = [];

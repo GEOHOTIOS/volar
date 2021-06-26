@@ -18,7 +18,7 @@ export function register(context: HtmlLanguageServiceContext) {
 	return (document: TextDocument, options: FormattingOptions) => {
 
 		const dummyTs = sharedServices.getDummyTsLs(ts, document);
-		const sourceFile = createSourceFile(document, dummyTs.ls, uriTsDocumentMap, context);
+		const sourceFile = createSourceFile(document, dummyTs.ls, dummyTs.ls, context);
 		let newDocument = document;
 
 		const pugEdits = getPugFormattingEdits();
@@ -175,7 +175,7 @@ export function register(context: HtmlLanguageServiceContext) {
 			const tsSourceMaps = [
 				...sourceFile.getTsSourceMaps(),
 				sourceFile.getTemplateScriptFormat().sourceMap,
-				...sourceFile.getScriptsRaw().sourceMaps,
+				...sourceFile.docLsScripts().sourceMaps,
 			].filter(notEmpty);
 
 			for (const sourceMap of tsSourceMaps) {
