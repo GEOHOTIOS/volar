@@ -10,7 +10,7 @@ import type {
 import type { ApiLanguageServiceContext } from '../types';
 import * as dedupe from '../utils/dedupe';
 
-export function register({ sourceFiles, getTsLs }: ApiLanguageServiceContext) {
+export function register({ sourceFiles, getTsLsType, getTsLs }: ApiLanguageServiceContext) {
 	function doPrepare(uri: string, position: Position) {
 		let vueItems: CallHierarchyItem[] = [];
 
@@ -77,7 +77,9 @@ export function register({ sourceFiles, getTsLs }: ApiLanguageServiceContext) {
 
 	function worker(tsDocUri: string, tsPos: Position) {
 		const vueOrTsItems: CallHierarchyItem[] = [];
-		const tsItems = getTsLs(tsDocUri).callHierarchy.doPrepare(tsDocUri, tsPos);
+		const tsLsType = getTsLsType(tsDocUri);
+		const tsLs = getTsLs(tsLsType);
+		const tsItems = tsLs.callHierarchy.doPrepare(tsDocUri, tsPos);
 		for (const tsItem of tsItems) {
 			const result = toVueCallHierarchyItem(tsItem, []);
 			if (!result) continue;

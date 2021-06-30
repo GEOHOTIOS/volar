@@ -147,9 +147,10 @@ export function createLanguageService(
 		sourceFiles,
 		templateTsLs,
 		scriptTsLs,
-		mapper: createMapper(sourceFiles, getTsLs, getTextDocument),
+		mapper: createMapper(sourceFiles, getTsLsType, getTsLs, getTextDocument),
 		documentContext,
 		getTsLs,
+		getTsLsType,
 	};
 	const _callHierarchy = callHierarchy.register(context);
 	const findDefinition = definitions.register(context);
@@ -158,13 +159,13 @@ export function createLanguageService(
 	// ts plugin proxy
 	const _tsPluginApis = tsPluginApis.register(context);
 	const tsPlugin: Partial<ts.LanguageService> = {
-		getSemanticDiagnostics: apiHook((...args: Parameters<ts.LanguageService['getSemanticDiagnostics']>) => context.getTsLs(fsPathToUri(args[0])).__internal__.raw.getSemanticDiagnostics(...args), false),
-		getEncodedSemanticClassifications: apiHook((...args: Parameters<ts.LanguageService['getEncodedSemanticClassifications']>) => context.getTsLs(fsPathToUri(args[0])).__internal__.raw.getEncodedSemanticClassifications(...args), false),
-		getCompletionsAtPosition: apiHook((...args: Parameters<ts.LanguageService['getCompletionsAtPosition']>) => context.getTsLs(fsPathToUri(args[0])).__internal__.raw.getCompletionsAtPosition(...args), false),
-		getCompletionEntryDetails: apiHook((...args: Parameters<ts.LanguageService['getCompletionEntryDetails']>) => context.getTsLs(fsPathToUri(args[0])).__internal__.raw.getCompletionEntryDetails(...args), false),
-		getCompletionEntrySymbol: apiHook((...args: Parameters<ts.LanguageService['getCompletionEntrySymbol']>) => context.getTsLs(fsPathToUri(args[0])).__internal__.raw.getCompletionEntrySymbol(...args), false),
-		getSignatureHelpItems: apiHook((...args: Parameters<ts.LanguageService['getSignatureHelpItems']>) => context.getTsLs(fsPathToUri(args[0])).__internal__.raw.getSignatureHelpItems(...args), false),
-		getRenameInfo: apiHook((...args: Parameters<ts.LanguageService['getRenameInfo']>) => context.getTsLs(fsPathToUri(args[0])).__internal__.raw.getRenameInfo(...args), false),
+		getSemanticDiagnostics: apiHook((...args: Parameters<ts.LanguageService['getSemanticDiagnostics']>) => context.getTsLs(context.getTsLsType(fsPathToUri(args[0]))).__internal__.raw.getSemanticDiagnostics(...args), false),
+		getEncodedSemanticClassifications: apiHook((...args: Parameters<ts.LanguageService['getEncodedSemanticClassifications']>) => context.getTsLs(context.getTsLsType(fsPathToUri(args[0]))).__internal__.raw.getEncodedSemanticClassifications(...args), false),
+		getCompletionsAtPosition: apiHook((...args: Parameters<ts.LanguageService['getCompletionsAtPosition']>) => context.getTsLs(context.getTsLsType(fsPathToUri(args[0]))).__internal__.raw.getCompletionsAtPosition(...args), false),
+		getCompletionEntryDetails: apiHook((...args: Parameters<ts.LanguageService['getCompletionEntryDetails']>) => context.getTsLs(context.getTsLsType(fsPathToUri(args[0]))).__internal__.raw.getCompletionEntryDetails(...args), false),
+		getCompletionEntrySymbol: apiHook((...args: Parameters<ts.LanguageService['getCompletionEntrySymbol']>) => context.getTsLs(context.getTsLsType(fsPathToUri(args[0]))).__internal__.raw.getCompletionEntrySymbol(...args), false),
+		getSignatureHelpItems: apiHook((...args: Parameters<ts.LanguageService['getSignatureHelpItems']>) => context.getTsLs(context.getTsLsType(fsPathToUri(args[0]))).__internal__.raw.getSignatureHelpItems(...args), false),
+		getRenameInfo: apiHook((...args: Parameters<ts.LanguageService['getRenameInfo']>) => context.getTsLs(context.getTsLsType(fsPathToUri(args[0]))).__internal__.raw.getRenameInfo(...args), false),
 
 		findRenameLocations: apiHook(_tsPluginApis.findRenameLocations, true),
 		getDefinitionAtPosition: apiHook(_tsPluginApis.getDefinitionAtPosition, false),
@@ -263,17 +264,19 @@ export function createLanguageService(
 		},
 	};
 
-	function getTsLs(tsUri: string | 'template' | 'script') {
-		if (tsUri === 'template') return templateTsLs;
-		if (tsUri === 'script') return scriptTsLs;
+	function getTsLs(lsType: 'template' | 'script') {
+		if (lsType === 'template') return templateTsLs;
+		else return scriptTsLs;
+	}
+	function getTsLsType(tsUri: string): 'template' | 'script' {
 		// TODO: return multiple
 		if (scriptTsLs.__internal__.getTextDocumentUncheck(tsUri)) {
-			return scriptTsLs;
+			return 'script';
 		}
 		if (templateTsLs.__internal__.getTextDocumentUncheck(tsUri)) {
-			return templateTsLs;
+			return 'template';
 		}
-		return scriptTsLs;
+		return 'script';
 	}
 	function getShouldUpdateTemplateScript(uri: string, pos: Position) {
 
@@ -456,7 +459,9 @@ export function createLanguageService(
 
 		function getScriptFileNames() {
 			const tsFileNames: string[] = [];
-			tsFileNames.push(uriToFsPath(globalDoc.uri));
+			if (lsType === 'template') {
+				tsFileNames.push(uriToFsPath(globalDoc.uri));
+			}
 			for (const fileName of vueHost.getScriptFileNames()) {
 				const uri = fsPathToUri(fileName);
 				const sourceFile = sourceFiles.get(uri);
@@ -500,7 +505,7 @@ export function createLanguageService(
 				// TODO
 				for (const [_, sourceFile] of sourceFiles) {
 					const doc = sourceFile.getScriptLsDoc();
-					if (doc) {
+					if (doc?.uri === uri) {
 						return doc.version.toString();
 					}
 				}
@@ -535,7 +540,7 @@ export function createLanguageService(
 				// TODO
 				for (const [_, sourceFile] of sourceFiles) {
 					const doc = sourceFile.getScriptLsDoc();
-					if (doc) {
+					if (doc?.uri === uri) {
 						const text = doc.getText();
 						const snapshot = ts.ScriptSnapshot.fromString(text);
 						scriptSnapshots.set(fileName, [version, snapshot]);

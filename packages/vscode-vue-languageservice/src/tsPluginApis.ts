@@ -2,7 +2,7 @@ import type { ApiLanguageServiceContext } from './types';
 import type * as ts from 'typescript';
 import { fsPathToUri, notEmpty } from '@volar/shared';
 
-export function register({ mapper, getTsLs }: ApiLanguageServiceContext) {
+export function register({ mapper, getTsLsType, getTsLs }: ApiLanguageServiceContext) {
 
     return {
         getCompletionsAtPosition,
@@ -17,7 +17,9 @@ export function register({ mapper, getTsLs }: ApiLanguageServiceContext) {
 
     // apis
     function getCompletionsAtPosition(fileName: string, position: number, options: ts.GetCompletionsAtPositionOptions | undefined): ReturnType<ts.LanguageService['getCompletionsAtPosition']> {
-        const info = getTsLs(fsPathToUri(fileName)).__internal__.raw.getCompletionsAtPosition(fileName, position, options);
+        const tsLsType = getTsLsType(fsPathToUri(fileName));
+        const tsLs = getTsLs(tsLsType);
+        const info = tsLs.__internal__.raw.getCompletionsAtPosition(fileName, position, options);
         if (!info) return;
         return {
             ...info,
@@ -48,7 +50,8 @@ export function register({ mapper, getTsLs }: ApiLanguageServiceContext) {
         providePrefixAndSuffixTextForRename?: boolean
     ) {
 
-        const tsLs = getTsLs(fsPathToUri(fileName));
+        const tsLsType = getTsLsType(fsPathToUri(fileName));
+        const tsLs = getTsLs(tsLsType);
         const loopChecker = new Set<string>();
         let symbols: (ts.DefinitionInfo | ts.ReferenceEntry | ts.ImplementationLocation | ts.RenameLocation)[] = [];
         withTeleports(fileName, position);
@@ -81,7 +84,8 @@ export function register({ mapper, getTsLs }: ApiLanguageServiceContext) {
     }
     function getDefinitionAndBoundSpan(fileName: string, position: number): ReturnType<ts.LanguageService['getDefinitionAndBoundSpan']> {
 
-        const tsLs = getTsLs(fsPathToUri(fileName));
+        const tsLsType = getTsLsType(fsPathToUri(fileName));
+        const tsLs = getTsLs(tsLsType);
         const loopChecker = new Set<string>();
         let textSpan: ts.TextSpan | undefined;
         let symbols: ts.DefinitionInfo[] = [];
@@ -114,7 +118,8 @@ export function register({ mapper, getTsLs }: ApiLanguageServiceContext) {
     }
     function findReferences(fileName: string, position: number): ReturnType<ts.LanguageService['findReferences']> {
 
-        const tsLs = getTsLs(fsPathToUri(fileName));
+        const tsLsType = getTsLsType(fsPathToUri(fileName));
+        const tsLs = getTsLs(tsLsType);
         const loopChecker = new Set<string>();
         let symbols: ts.ReferencedSymbol[] = [];
         withTeleports(fileName, position);

@@ -129,7 +129,7 @@ export function createSourceFile(
 			templateLsScript.sourceMapForTemplate.value,
 			templateLsMainScript.sourceMap.value,
 			templateLsTemplateScript.sourceMap.value,
-			scriptLsScript.sourceMap.value,
+			// scriptLsScript.sourceMap.value,
 		].filter(notEmpty);
 		return result;
 	});
@@ -465,11 +465,11 @@ export function createSourceFile(
 			result: ComputedRef<Diagnostic[]>;
 			cache: ComputedRef<Diagnostic[]>;
 		}, number, Diagnostic[]][] = [
-				[useScriptValidation(templateLsScript.textDocument, 1), 0, []],
-				[useScriptValidation(templateLsScript.textDocument, 2), 0, []],
-				[useScriptValidation(computed(() => templateLsScript.textDocumentForSuggestion.value ?? templateLsScript.textDocument.value), 3), 0, []],
+				[useScriptValidation(scriptLsScript.textDocument, 1), 0, []],
+				[useScriptValidation(scriptLsScript.textDocument, 2), 0, []],
+				[useScriptValidation(computed(() => scriptLsScript.textDocumentForSuggestion.value ?? scriptLsScript.textDocument.value), 3), 0, []],
 				// [useScriptValidation(virtualScriptGen.textDocument, 4), 0, []], // TODO: support cancel because it's very slow
-				[useScriptValidation(computed(() => anyNoUnusedEnabled ? templateLsScript.textDocumentForSuggestion.value : undefined), 1, true), 0, []],
+				[useScriptValidation(computed(() => anyNoUnusedEnabled ? scriptLsScript.textDocumentForSuggestion.value : undefined), 1, true), 0, []],
 			];
 
 		return async (response: (diags: Diagnostic[]) => void, isCancel?: () => Promise<boolean>) => {
@@ -822,7 +822,7 @@ export function createSourceFile(
 			const cacheWithSourceMap = computed(() => {
 				const doc = document.value;
 				if (!doc) return [];
-				let result = toTsSourceDiags(errors_cache.value, doc.uri, tsSourceMaps.value);
+				let result = toTsSourceDiags('script', errors_cache.value, doc.uri, tsSourceMaps.value);
 				if (onlyUnusedCheck) {
 					result = result.filter(error => error.tags?.includes(DiagnosticTag.Unnecessary));
 				}
@@ -887,11 +887,13 @@ export function createSourceFile(
 			});
 			const cacheWithSourceMap = computed(() => {
 				const result_1 = templateLsTemplateScript.textDocument.value ? toTsSourceDiags(
+					'template',
 					errors_1_cache.value,
 					templateLsTemplateScript.textDocument.value.uri,
 					tsSourceMaps.value,
 				) : [];
 				const result_2 = templateLsScript.textDocument.value ? toTsSourceDiags(
+					'template',
 					errors_2_cache.value,
 					templateLsScript.textDocument.value.uri,
 					tsSourceMaps.value,
@@ -922,7 +924,7 @@ export function createSourceFile(
 			}
 			return result;
 		}
-		function toTsSourceDiags(errors: Diagnostic[], virtualScriptUri: string, sourceMaps: TsSourceMap[]) {
+		function toTsSourceDiags(lsType: 'template' | 'script', errors: Diagnostic[], virtualScriptUri: string, sourceMaps: TsSourceMap[]) {
 			const result: Diagnostic[] = [];
 			for (const error of errors) {
 				const vueRange = findVueRange(virtualScriptUri, error.range);
@@ -980,7 +982,7 @@ export function createSourceFile(
 						}
 					}
 				}
-				const vueLocs = 'mapper' in context ? context.mapper.ts.from(virtualUri, virtualRange.start, virtualRange.end) : [];
+				const vueLocs = 'mapper' in context ? context.mapper.ts.from(lsType, virtualUri, virtualRange.start, virtualRange.end) : [];
 				for (const vueLoc of vueLocs) {
 					if (!vueLoc.data || vueLoc.data.capabilities.diagnostic) {
 						return {

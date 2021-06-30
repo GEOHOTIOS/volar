@@ -12,7 +12,7 @@ import { wordPatterns } from './completion';
 import { getWordRange } from '@volar/shared';
 import { TsMappingData } from '../utils/sourceMaps';
 
-export function register({ mapper, getCssLs }: ApiLanguageServiceContext) {
+export function register({ sourceFiles, mapper, getCssLs, getTsLs, scriptTsLs }: ApiLanguageServiceContext) {
 
 	return {
 		prepareRename: (uri: string, position: Position) => {
@@ -73,22 +73,29 @@ export function register({ mapper, getCssLs }: ApiLanguageServiceContext) {
 			}
 		}
 	}
+	function onTsScriptPrepareWorker(tsUri: string, ) {
+		const tsLs = getTsLs('script');
+	}
 	function onTsFile(oldUri: string, newUri: string) {
 
-		// vue -> ts
-		const tsMaped = mapper.tsUri.to(oldUri);
-		if (!tsMaped)
-			return;
-
-		const tsOldUri = tsMaped.textDocument.uri;
-		const tsNewUri = tsMaped.isVirtualFile ? newUri + '.ts' : newUri;
-		const tsResult = tsMaped.languageService.getEditsForFileRename(tsOldUri, tsNewUri);
-		if (!tsResult)
-			return;
-
-		// ts -> vue
-		const vueResult = tsEditToVueEdit(tsResult, mapper, canRename);
-		return vueResult;
+		const sourceFile = sourceFiles.get(oldUri);
+		if (sourceFile) {
+			const tsDoc = sourceFile.getScriptLsDoc();
+			if (tsDoc) {
+				const tsOldUri = tsDoc.uri;
+				const tsNewUri = newUri + '.ts';
+				const tsResult = scriptTsLs.getEditsForFileRename(tsOldUri, tsNewUri);
+				if (tsResult) {
+					return tsEditToVueEdit('script', tsResult, mapper, canRename);
+				}
+			}
+		}
+		else {
+			const tsResult = scriptTsLs.getEditsForFileRename(oldUri, newUri);
+			if (tsResult) {
+				return tsEditToVueEdit('script', tsResult, mapper, canRename);
+			}
+		}
 	}
 	function onTs(uri: string, position: Position, newName: string) {
 
@@ -247,7 +254,7 @@ export function margeWorkspaceEdits(original: WorkspaceEdit, ...others: Workspac
 		}
 	}
 }
-export function tsEditToVueEdit(tsResult: WorkspaceEdit, mapper: ApiLanguageServiceContext['mapper'], isValidRange: (data?: TsMappingData) => boolean) {
+export function tsEditToVueEdit(lsType: 'template' | 'script', tsResult: WorkspaceEdit, mapper: ApiLanguageServiceContext['mapper'], isValidRange: (data?: TsMappingData) => boolean) {
 	const vueResult: WorkspaceEdit = {};
 	let hasResult = false;
 
@@ -265,7 +272,7 @@ export function tsEditToVueEdit(tsResult: WorkspaceEdit, mapper: ApiLanguageServ
 	for (const tsUri in tsResult.changes) {
 		const tsEdits = tsResult.changes[tsUri];
 		for (const tsEdit of tsEdits) {
-			for (const vueRange of mapper.ts.from(tsUri, tsEdit.range.start, tsEdit.range.end)) {
+			for (const vueRange of mapper.ts.from(lsType, tsUri, tsEdit.range.start, tsEdit.range.end)) {
 				if (
 					!vueRange.data
 					|| vueRange.data.capabilities.rename === true
@@ -305,7 +312,7 @@ export function tsEditToVueEdit(tsResult: WorkspaceEdit, mapper: ApiLanguageServ
 					[],
 				);
 				for (const tsEdit of tsDocEdit.edits) {
-					for (const vueRange of mapper.ts.from(tsDocEdit.textDocument.uri, tsEdit.range.start, tsEdit.range.end)) {
+					for (const vueRange of mapper.ts.from(lsType, tsDocEdit.textDocument.uri, tsEdit.range.start, tsEdit.range.end)) {
 						if (isValidRange(vueRange.data)) {
 							_vueDocEdit.edits.push({
 								annotationId: AnnotatedTextEdit.is(tsEdit.range) ? tsEdit.range.annotationId : undefined,
